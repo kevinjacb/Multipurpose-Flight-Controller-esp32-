@@ -3,6 +3,10 @@
 #include "globals.h"
 
 /*
+    Sections:
+    1. IMU
+    2. WiFiBluetooth
+
     Error LEDS:
     LED 1: 34 RED
     LED 2: 25 GREEN
@@ -10,8 +14,10 @@
 
     Errors:
         LED 2: Steady - No error : Error code 0
-        LED 1: Blinking - Error with IMU : Error code 1s
+        LED 1: Blinking - Error with IMU : Error code 1
         LED 1,2,3: strobe - Initialization : Error code 2
+        LED 3: Blinking, LED 2: steady - Waiting for wifi/client connection: Error code 3
+        LED 2,3: steady - Error with WiFi/Bluetooth : Error code 4
 
 */
 
@@ -53,8 +59,19 @@ void ErrorNotifier::notifyError()
         blink(BLUE_L, 400);
         break;
     case 3:
-        // Error 3
+        // Waiting for wifi/client connection
+        digitalWrite(RED_L, LOW);
+        digitalWrite(GREEN_L, HIGH);
+        blink(BLUE_L, 100);
         break;
+
+    case 4:
+        // Error with WiFi/Bluetooth
+        digitalWrite(RED_L, LOW);
+        digitalWrite(GREEN_L, HIGH);
+        digitalWrite(BLUE_L, HIGH);
+        break;
+
     default:
         break;
     }

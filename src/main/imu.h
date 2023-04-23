@@ -7,7 +7,6 @@
 class IMU
 {
 public:
-    bool isInitialized();
     void getAngles(float &pitch, float &roll, float &yaw);
     static IMU &getInstance();
 

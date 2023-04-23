@@ -46,10 +46,6 @@ IMU::IMU()
 }
 
 // return state of initialization
-bool IMU::isInitialized()
-{
-    return initialized;
-}
 
 // return the instance of the IMU
 IMU &IMU::getInstance()
