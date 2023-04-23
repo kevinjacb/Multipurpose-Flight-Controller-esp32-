@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <mutex>
+#include <EEPROM.h>
 
 // LED Pins and Error Codes
 #define RED_L 34
@@ -17,7 +18,7 @@
 // IMU Address
 #define ADDR 0x68
 
-// PID Gains
+// PID Gains (default)
 #define Kp 0.5
 #define Ki 0.005
 #define Kd 0.1
@@ -53,6 +54,21 @@
     {                          \
         1000, 1500, 1500, 1500 \
     }
+
+// EEPROM settings
+#define EEPROM_SIZE 48
+#define KP_ADDR 0
+#define KI_ADDR 4
+#define KD_ADDR 8
+#define ACC_X_BIAS_ADDR 12
+#define ACC_Y_BIAS_ADDR 16
+#define ACC_Z_BIAS_ADDR 20
+#define GYRO_X_BIAS_ADDR 24
+#define GYRO_Y_BIAS_ADDR 28
+#define GYRO_Z_BIAS_ADDR 32
+#define MAG_X_BIAS_ADDR 36
+#define MAG_Y_BIAS_ADDR 40
+#define MAG_Z_BIAS_ADDR 44
 
 // data transfer settings
 #define SEPARATOR " "
@@ -90,6 +106,36 @@ public:
     static Globals &getInstance();
     uint8_t getError();
     void setError(uint8_t error, uint8_t section);
+};
+
+class EEPROMHandler
+{
+    /*
+
+    ! Handles float only for now !
+
+    bytes:
+    0-3: Kp
+    4-7: Ki
+    8-11: Kd
+    12-15: AccXBias
+    16-19: AccYBias
+    20-23: AccZBias
+    24-27: GyroXBias
+    28-31: GyroYBias
+    32-35: GyroZBias
+    36-39: MagXBias
+    40-43: MagYBias
+    44-47: MagZBias
+
+    */
+private:
+    EEPROMHandler();
+
+public:
+    static EEPROMHandler &getInstance();
+    void write(uint16_t address, float data);
+    float read(uint16_t address);
 };
 
 #endif GLOBALS_H

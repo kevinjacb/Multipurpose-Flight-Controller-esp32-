@@ -6,6 +6,7 @@
     Sections:
     1. IMU
     2. WiFiBluetooth
+    3. EEPROM
 
     Error LEDS:
     LED 1: 34 RED
@@ -18,6 +19,7 @@
         LED 1,2,3: strobe - Initialization : Error code 2
         LED 3: Blinking, LED 2: steady - Waiting for wifi/client connection: Error code 3
         LED 2,3: steady - Error with WiFi/Bluetooth : Error code 4
+        LED 1,2,3: steady - Writing to EEPROM: Error code 5
 
 */
 
@@ -68,6 +70,13 @@ void ErrorNotifier::notifyError()
     case 4:
         // Error with WiFi/Bluetooth
         digitalWrite(RED_L, LOW);
+        digitalWrite(GREEN_L, HIGH);
+        digitalWrite(BLUE_L, HIGH);
+        break;
+
+    case 5:
+        // Writing to EEPROM
+        digitalWrite(RED_L, HIGH);
         digitalWrite(GREEN_L, HIGH);
         digitalWrite(BLUE_L, HIGH);
         break;

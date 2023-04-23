@@ -40,9 +40,13 @@ IMU::IMU()
     }
 
     // TODO : make dynamic
-    mpu.setAccBias(753.27, -446.93, 1055.02);
-    mpu.setGyroBias(41.95, 303.32, 113.12);
-    mpu.setMagBias(184.57, 336.55, 24.76);
+    // mpu.setAccBias(753.27, -446.93, 1055.02);
+    // mpu.setGyroBias(41.95, 303.32, 113.12);
+    // mpu.setMagBias(184.57, 336.55, 24.76);
+
+    mpu.setAccBias(ACC_X_BIAS_ADDR, ACC_Y_BIAS_ADDR, ACC_Z_BIAS_ADDR);
+    mpu.setGyroBias(GYRO_X_BIAS_ADDR, GYRO_Y_BIAS_ADDR, GYRO_Z_BIAS_ADDR);
+    mpu.setMagBias(MAG_X_BIAS_ADDR, MAG_Y_BIAS_ADDR, MAG_Z_BIAS_ADDR);
 }
 
 // return state of initialization
@@ -62,4 +66,9 @@ void IMU::getAngles(float &pitch, float &roll, float &yaw)
     pitch = mpu.getPitch();
     roll = mpu.getRoll();
     yaw = mpu.getYaw();
+}
+
+void IMU::callibrate()
+{
+    // TODO
 }

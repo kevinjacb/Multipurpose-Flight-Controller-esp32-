@@ -24,3 +24,35 @@ void Globals::setError(uint8_t err, uint8_t section)
     handler = section;
     error = err;
 }
+
+EEPROMHandler::EEPROMHandler()
+{
+    EEPROM.begin(EEPROM_SIZE);
+}
+
+EEPROMHandler &EEPROMHandler::getInstance()
+{
+    static EEPROMHandler instance;
+    return instance;
+}
+
+void EEPROMHandler::write(uint8_t address, float value)
+{
+    byte *p = (byte *)(void *)&value;
+    Globals.getInstance().setError(5, 3);
+    for (uint8_t i = 0; i < sizeof(value); i++)
+    {
+        if (EEPROM.read(address) != *p)
+            EEPROM.write(address++, *p++);
+    }
+    Globals.getInstance().setError(0, 3);
+}
+
+float EEPROMHandler::read(uint8_t address)
+{
+    float value = 0.0;
+    byte *p = (byte *)(void *)&value;
+    for (uint8_t i = 0; i < sizeof(value); i++)
+        *p++ = EEPROM.read(address++);
+    return value;
+}

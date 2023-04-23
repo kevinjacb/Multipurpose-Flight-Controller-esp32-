@@ -4,9 +4,10 @@
 
 PIDController::PIDController()
 {
-    _kp = Kp;
-    _ki = Ki;
-    _kd = Kd;
+    EEPROMHandler &eeprom = EEPROMHandler::getInstance();
+    _kp = eeprom.read(KP_ADDR);
+    _ki = eeprom.read(KI_ADDR);
+    _kd = eeprom.read(KD_ADDR);
     _dt = dt;
     _error = 0.0f;
     _error_sum = 0.0f;
