@@ -1,3 +1,6 @@
+#ifndef MOTORS_H
+#define MOTORS_H
+
 #include <Arduino.h>
 #include "globals.h"
 
@@ -14,4 +17,7 @@ private:
 public:
     void setOutputs(output_t outputs);
     static Outputs &getInstance();
+    void begin();
 };
+
+#endif

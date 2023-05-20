@@ -6,38 +6,43 @@
 #include <EEPROM.h>
 
 // LED Pins and Error Codes
-#define RED_L 34
-#define GREEN_L 25
+#define RED_L 25
+#define GREEN_L 18
 #define BLUE_L 26
 #define IMU_ERROR 1
 
+#define ENABLE_DEBUG
 // wifi control enable
 #define USE_WIFI
-// #define USE_RC
+// disables radio control over the drone via wifi
+#define USE_RC 35 // pin number
+#define NUM_CHANNELS 8
 
 // IMU Address
+// #define SEL_MPU6050 // selects mpu6050 sensor
+#define SEL_MPU9250
 #define ADDR 0x68
 
 // PID Gains (default)
-#define Kp 0.5
-#define Ki 0.005
-#define Kd 0.1
-#define dt 0.01
+#define pre_Kp 1000.0
+#define pre_Ki 5.0
+#define pre_Kd 5.0
+#define pre_dt 0.01 // s
 
 // WiFi AP Credentials & settings
-#define AP_SSID "SSID"
-#define AP_PSWD "PASSWORD"
+#define AP_SSID "DRONEY"
+#define AP_PSWD "123456789"
 #define TIMEOUT 60000 // wifi timeout in ms (1 min)
 
 // drone types TODO
-// #define BRUSHLESS // uncomment for brushed
+#define BRUSHLESS // uncomment for brushless
 
 #define QUAD_X
 // #define HEX
 
 // motor pins (currently only for quad x and hex configs)
-#define MOTOR1 12
-#define MOTOR2 13
+#define MOTOR1 13
+#define MOTOR2 12
 #define MOTOR3 14
 #define MOTOR4 27
 #define MOTOR5 33
@@ -50,11 +55,17 @@
 #define PWM_RES_BRUSHLESS 10  // bits
 
 // IDLE control
+#if defined(BRUSHLESS)
 #define IDLE                   \
     {                          \
         1000, 1500, 1500, 1500 \
     }
-
+#else
+#define IDLE       \
+    {              \
+        0, 0, 0, 0 \
+    }
+#endif
 // EEPROM settings
 #define EEPROM_SIZE 48
 #define KP_ADDR 0
@@ -70,6 +81,9 @@
 #define MAG_Y_BIAS_ADDR 40
 #define MAG_Z_BIAS_ADDR 44
 
+#define OUTPUT_READABLE_YAWPITCHROLL
+#define INTERRUPT_PIN 5
+
 // data transfer settings
 #define SEPARATOR " "
 
@@ -80,6 +94,8 @@ typedef struct control
     float roll;
     float pitch;
     float yaw;
+    float aux1;
+    float aux2;
 } control_t;
 
 // motor outputs struct
@@ -93,13 +109,21 @@ typedef struct outputs
     uint16_t motor6;
 } output_t;
 
+typedef struct state
+{
+    bool inverted_pitch, inverted_roll, inverted_yaw;
+    bool arm;
+    bool calibrate;
+    float _Kp, _Ki, _Kd;
+} state_t;
+
 class Globals
 {
 private:
     uint8_t error;
     uint8_t handler;
     std::mutex errorMutex;
-    static Globals instance;
+    Globals();
 
 public:
     static constexpr uint8_t LED_PINS[3] = {RED_L, GREEN_L, BLUE_L};
@@ -127,6 +151,9 @@ class EEPROMHandler
     36-39: MagXBias
     40-43: MagYBias
     44-47: MagZBias
+    48: pitch_invert
+    49: roll_invert
+    50: yaw_invert
 
     */
 private:
@@ -136,6 +163,7 @@ public:
     static EEPROMHandler &getInstance();
     void write(uint16_t address, float data);
     float read(uint16_t address);
+    void begin();
 };
 
-#endif GLOBALS_H
+#endif // GLOBALS_H

@@ -2,11 +2,13 @@
 #include "globals.h"
 #include <WiFi.h>
 #include <WiFiClient.h>
+#include <Arduino.h>
+#include "pid.h"
 
 // Section 2: WiFiBluetooth
 
 // setup WiFi
-WiFiBluetooth::WiFiBluetooth(wifi_mode_t mode, char *ssid, char *password)
+void WiFiBluetooth::begin(wifi_mode_t mode, char *ssid, char *password)
 {
     WiFi.mode(mode);
     if (mode == WIFI_AP)
@@ -41,9 +43,13 @@ WiFiBluetooth::WiFiBluetooth(wifi_mode_t mode, char *ssid, char *password)
     // }
 }
 
-WiFiBluetooth &WiFiBluetooth::getInstance(wifi_mode_t mode, char *ssid, char *password)
+WiFiBluetooth::WiFiBluetooth()
 {
-    static WiFiBluetooth instance(mode, ssid, password);
+}
+
+WiFiBluetooth &WiFiBluetooth::getInstance()
+{
+    static WiFiBluetooth instance;
     return instance;
 }
 
@@ -78,16 +84,138 @@ void WiFiBluetooth::send(const char *data)
     // TODO
 }
 
-control_t WiFiBluetooth::receive(control_t prevControls)
+/* COMMANDS:
+
+    J1 x y -> Yaw and Throttle
+    J2 x y -> Roll and Pitch
+    arm -> Arm
+    calibrate -> Calibrate
+    stop -> Stop
+    packed Kp x Kd y Ki z -> PID gains (grouped together)
+    Kp x -> Kp
+    Ki x -> Ki
+    Kd x -> Kd
+    pitch x -> Pitch invert or not
+    roll x -> Roll invert or not
+    yaw x -> Yaw invert or not
+    save -> Save to eeprom
+
+*/
+
+control_t WiFiBluetooth::processIncoming(String data, control_t prevControls, state_t &state)
+{
+    try
+    {
+        int len = data.length();
+        control_t rControls = prevControls;
+        float recv_kp = 0.0f, recv_ki = 0.0f, recv_kd = 0.0f;
+        data.trim();
+#if !defined(USE_RC)
+        if (data.startsWith("J1"))
+        {
+            int sIndex = data.indexOf(' ');
+            int x = data.substring(sIndex, data.indexOf(' ', sIndex + 1)).toDouble();
+            sIndex = data.indexOf(' ', sIndex + 1);
+            int y = data.substring(sIndex).toDouble();
+
+            rControls.yaw = x * 30.0;
+#if defined(BRUSHED)
+            rControls.throttle += y * 5000;
+#else
+            rControls.throttle += y * 100;
+#endif
+        }
+        else if (data.startsWith("J2"))
+        {
+            int sIndex = data.indexOf(' ');
+            int x = data.substring(sIndex, data.indexOf(' ', sIndex + 1)).toDouble();
+            sIndex = data.indexOf(' ', sIndex + 1);
+            int y = data.substring(sIndex).toDouble();
+
+            rControls.roll = x * 30.0;
+            rControls.pitch = y * 30.0;
+        }
+#endif
+        if (data.startsWith("arm"))
+        {
+            state.arm = true;
+        }
+        else if (data.startsWith("calibrate"))
+        {
+            state.calibrate = true;
+        }
+        else if (data.startsWith("stop"))
+        {
+            rControls = (control_t)IDLE;
+            ;
+        }
+        else if (data.startsWith("Kp"))
+        {
+            int sIndex = data.indexOf(' ');
+            recv_kp = data.substring(sIndex).toDouble();
+            state._Kp = recv_kp;
+        }
+        else if (data.startsWith("Ki"))
+        {
+            int sIndex = data.indexOf(' ');
+            recv_ki = data.substring(sIndex).toDouble();
+            state._Ki = recv_ki;
+        }
+        else if (data.startsWith("Kd"))
+        {
+            int sIndex = data.indexOf(' ');
+            recv_kd = data.substring(sIndex).toDouble();
+            state._Kd = recv_kd;
+        }
+        else if (data.startsWith("pitch"))
+        {
+            int sIndex = data.indexOf(' ');
+            int x = data.substring(sIndex).toDouble();
+            state.inverted_pitch = x;
+        }
+        else if (data.startsWith("roll"))
+        {
+            int sIndex = data.indexOf(' ');
+            int x = data.substring(sIndex).toDouble();
+            state.inverted_roll = x;
+        }
+        else if (data.startsWith("yaw"))
+        {
+            int sIndex = data.indexOf(' ');
+            int x = data.substring(sIndex).toDouble();
+            state.inverted_yaw = x;
+        }
+        else if (data.startsWith("packed"))
+        {
+            int sIndex = data.indexOf(' ');
+            recv_kp = data.substring(sIndex, data.indexOf(' ', sIndex + 1)).toDouble();
+            sIndex = data.indexOf(' ', sIndex + 1);
+            recv_kd = data.substring(sIndex, data.indexOf(' ', sIndex + 1)).toDouble();
+            sIndex = data.indexOf(' ', sIndex + 1);
+            recv_ki = data.substring(sIndex).toDouble();
+            state._Kp = recv_kp;
+            state._Kd = recv_kd;
+            state._Ki = recv_ki;
+        }
+
+        return rControls;
+    }
+    catch (...)
+    {
+        return prevControls;
+    }
+}
+control_t WiFiBluetooth::receive(control_t prevControls, state_t &state)
 {
     // TODO
-    char *data;
+    String data;
     if (client.connected())
     {
+        Globals::getInstance().setError(0, 2);
         // TODO
         if (client.available())
         {
-            client.readStringUntil('\r').toCharArray(data, 100);
+            data = client.readStringUntil('\r');
         }
     }
     else
@@ -99,28 +227,7 @@ control_t WiFiBluetooth::receive(control_t prevControls)
             return (control_t)IDLE; // handle failsafe here (midflight disconnect)
         }
     }
-
-    if (data && strlen(data) > 0)
-    {
-        int len = strlen(data);
-        control_t rControls;
-        try // extracts received data
-        {
-            char *token = strtok(data, SEPARATOR);
-            rControls.throttle = atof(token);
-            token = strtok(NULL, SEPARATOR);
-            rControls.roll = atof(token);
-            token = strtok(NULL, SEPARATOR);
-            rControls.pitch = atof(token);
-            token = strtok(NULL, SEPARATOR);
-            rControls.yaw = atof(token);
-            token = strtok(NULL, SEPARATOR); // rest of the data // todo
-            return rControls;
-        }
-        catch (...)
-        {
-            return prevControls;
-        }
-    }
+    if (data.length() > 0)
+        return processIncoming(data, prevControls, state);
     return prevControls;
 }

@@ -1,6 +1,12 @@
 #include "globals.h"
 #include <Arduino.h>
 
+Globals::Globals()
+{
+    error = 0;
+    handler = 0;
+}
+
 // return singleton instance
 Globals &Globals::getInstance()
 {
@@ -18,7 +24,7 @@ uint8_t Globals::getError()
 // set error code
 void Globals::setError(uint8_t err, uint8_t section)
 {
-    if (error != 0 && section != handler)
+    if (error != 0 && section != handler && handler != 0)
         return;
     std::unique_lock<std::mutex> lock(errorMutex);
     handler = section;
@@ -26,6 +32,10 @@ void Globals::setError(uint8_t err, uint8_t section)
 }
 
 EEPROMHandler::EEPROMHandler()
+{
+}
+
+void EEPROMHandler::begin()
 {
     EEPROM.begin(EEPROM_SIZE);
 }
@@ -36,19 +46,19 @@ EEPROMHandler &EEPROMHandler::getInstance()
     return instance;
 }
 
-void EEPROMHandler::write(uint8_t address, float value)
+void EEPROMHandler::write(uint16_t address, float value)
 {
     byte *p = (byte *)(void *)&value;
-    Globals.getInstance().setError(5, 3);
+    Globals::getInstance().setError(5, 3);
     for (uint8_t i = 0; i < sizeof(value); i++)
     {
         if (EEPROM.read(address) != *p)
             EEPROM.write(address++, *p++);
     }
-    Globals.getInstance().setError(0, 3);
+    Globals::getInstance().setError(0, 3);
 }
 
-float EEPROMHandler::read(uint8_t address)
+float EEPROMHandler::read(uint16_t address)
 {
     float value = 0.0;
     byte *p = (byte *)(void *)&value;

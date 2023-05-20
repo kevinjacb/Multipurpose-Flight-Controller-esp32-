@@ -1,12 +1,19 @@
 #include "imu.h"
 #include "MPU9250.h"
 #include "globals.h"
+#include <Wire.h>
 
 // SECTION 1: IMU
 
 IMU::IMU()
 {
+}
 
+void IMU::begin()
+{
+    Wire.setClock(400000);
+    Wire.begin();
+    Serial.begin(115200);
     Globals &gInstance = Globals::getInstance();
 
     // configure the IMU
@@ -18,18 +25,20 @@ IMU::IMU()
     initialized = true;
 
     // initialize the IMU
+    Serial.print("Initializing IMU...");
     gInstance.setError(2, 1);
 
     long start_time = millis();
     while (!mpu.setup(ADDR, settings))
     {
-        if (millis() - start_time > 10000)
+        if (millis() - start_time > 2000)
         {
             initialized = false;
             break;
         }
     }
 
+    Serial.println("Done!");
     // setError based on the initialization
     if (initialized)
         gInstance.setError(0, 1);
@@ -44,9 +53,9 @@ IMU::IMU()
     // mpu.setGyroBias(41.95, 303.32, 113.12);
     // mpu.setMagBias(184.57, 336.55, 24.76);
 
-    mpu.setAccBias(ACC_X_BIAS_ADDR, ACC_Y_BIAS_ADDR, ACC_Z_BIAS_ADDR);
-    mpu.setGyroBias(GYRO_X_BIAS_ADDR, GYRO_Y_BIAS_ADDR, GYRO_Z_BIAS_ADDR);
-    mpu.setMagBias(MAG_X_BIAS_ADDR, MAG_Y_BIAS_ADDR, MAG_Z_BIAS_ADDR);
+    // mpu.setAccBias(ACC_X_BIAS_ADDR, ACC_Y_BIAS_ADDR, ACC_Z_BIAS_ADDR);
+    // mpu.setGyroBias(GYRO_X_BIAS_ADDR, GYRO_Y_BIAS_ADDR, GYRO_Z_BIAS_ADDR);
+    // mpu.setMagBias(MAG_X_BIAS_ADDR, MAG_Y_BIAS_ADDR, MAG_Z_BIAS_ADDR);
 }
 
 // return state of initialization
@@ -68,7 +77,21 @@ void IMU::getAngles(float &pitch, float &roll, float &yaw)
     yaw = mpu.getYaw();
 }
 
-void IMU::callibrate()
+void IMU::calibrate(float &offset_pitch, float &offset_roll, float &offset_yaw)
 {
-    // TODO
+    Globals &instance = Globals::getInstance();
+    instance.setError(2, 1);
+    float pitch, roll, yaw;
+    for (int i = 0; i < 100; i++)
+    {
+        getAngles(pitch, roll, yaw);
+        offset_pitch += pitch;
+        offset_roll += roll;
+        offset_yaw += yaw;
+        delay(10);
+    }
+    offset_pitch /= 100;
+    offset_roll /= 100;
+    offset_yaw /= 100;
+    instance.setError(0, 1);
 }

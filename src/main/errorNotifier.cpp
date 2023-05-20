@@ -22,8 +22,11 @@
         LED 1,2,3: steady - Writing to EEPROM: Error code 5
 
 */
-
 ErrorNotifier::ErrorNotifier()
+{
+}
+
+void ErrorNotifier::begin()
 {
     for (uint8_t i = 0; i < 3; i++)
     {
@@ -44,7 +47,9 @@ void ErrorNotifier::notifyError()
 
     case 0:
         // No error
-        digitalWrite(RED_L, HIGH);
+        digitalWrite(RED_L, LOW);
+        digitalWrite(BLUE_L, LOW);
+        digitalWrite(GREEN_L, HIGH);
         break;
 
     case 1:

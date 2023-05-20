@@ -4,6 +4,10 @@
 
 Outputs::Outputs()
 {
+}
+
+void Outputs::begin()
+{
 #if defined(QUAD_X) // repurpose the unused pins maybe?
     motorPins = new uint8_t[4]{MOTOR1, MOTOR2, MOTOR3, MOTOR4};
 #if defined(BRUSHLESS) // TODO add hexa and octo and other types

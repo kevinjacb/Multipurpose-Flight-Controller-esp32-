@@ -16,6 +16,7 @@ private:
 public:
     static ErrorNotifier &getInstance();
     void notifyError();
+    void begin();
 };
 
-#endif ERR_H
+#endif // ERR_H
