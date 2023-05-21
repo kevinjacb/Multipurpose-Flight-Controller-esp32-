@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "globals.h"
+#include <ESP32Servo.h>
 
 class Outputs
 {

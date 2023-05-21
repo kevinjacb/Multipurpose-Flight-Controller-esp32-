@@ -61,6 +61,7 @@ void setup()
     errorNotifier.begin();
     eeprom.begin();
     out.begin();
+    out.setOutputs(IDLE);
     WBController.begin();
 #if defined(USE_RC)
     reciever.begin();
@@ -82,17 +83,14 @@ void loop()
 #if defined(ENABLE_DEBUG)
     if (millis() - last_debug_print > 200 && false)
     {
-        print("Controls: ");
-        print(currControls.throttle);
-        print(" ");
-        print(currControls.pitch);
-        print(" ");
-        print(currControls.roll);
-        print(" ");
-        print(currControls.yaw);
-        println();
-        // print("Error: ");
-        // println(global.getError());
+        print("Error: ");
+        println(global.getError());
+        print("Kp : ");
+        print(state._Kp);
+        print("\tKi : ");
+        print(state._Ki);
+        print("\tKd : ");
+        println(state._Kd);
         last_debug_print = millis();
     }
 
@@ -113,10 +111,17 @@ void loop()
 #if !defined(USE_RC)
     throttle_percent = currControls.throttle / 65535.0f * 100.0f;
 #else
-    throttle_percent = currControls.throttle / 2000.0f * 100.0f;
+    throttle_percent = (currControls.throttle - 1000) / 1000.0f * 100.0f;
 #endif
     if (global.getError() != 0)
     { // TODO disarm drone when error occurs
+#if defined(USE_RC)
+        if (global.getError() == 3)
+        {
+            ready = true;
+            return;
+        }
+#endif
         ready = false;
         return;
     }
@@ -135,7 +140,7 @@ void main_process(void *parameter)
         // set a threshold for throttle at which the drone will start
         if (!ready)
             currControls.throttle = 0;
-        if (throttle_percent > 20)
+        if (throttle_percent > 15)
         {
             // calculate pid
             pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw);

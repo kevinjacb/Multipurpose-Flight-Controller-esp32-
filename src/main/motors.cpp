@@ -13,7 +13,8 @@ void Outputs::begin()
 #if defined(BRUSHLESS) // TODO add hexa and octo and other types
     for (int i = 0; i < 4; i++)
     {
-        motors[i].attach(motorPins[i]);
+        motors[i].setPeriodHertz(PWM_FREQ_BRUSHLESS);
+        motors[i].attach(motorPins[i], 1000, 2000);
     }
 #elif defined(QUAD_X)
     for (int i = 0; i < 4; i++)
@@ -27,7 +28,7 @@ void Outputs::begin()
 
 void Outputs::setOutputs(output_t outputs)
 {
-#if defined(BRUSHLESS) && defined(QUAD_X) // TODO add hexa and octo and other types
+#if defined(BRUSHLESS) // TODO add hexa and octo and other types
     motors[0].writeMicroseconds(outputs.motor1);
     motors[1].writeMicroseconds(outputs.motor2);
     motors[2].writeMicroseconds(outputs.motor3);

@@ -49,28 +49,16 @@ control_t RCReciever::receive(control_t prevControls, state_t &state)
 {
     if (ready)
     {
-        prevControls.throttle = channels[0];
+
+        prevControls.throttle = channels[2];
         prevControls.pitch = map(channels[1], 990, 2010, -45, 45);
         prevControls.pitch = (state.inverted_pitch) ? -prevControls.pitch : prevControls.pitch;
-        prevControls.roll = map(channels[2], 990, 2010, -45, 45);
+        prevControls.roll = map(channels[0], 990, 2010, -45, 45);
         prevControls.roll = (state.inverted_roll) ? -prevControls.roll : prevControls.roll;
         prevControls.yaw = map(channels[3], 990, 2010, -45, 45);
         prevControls.yaw = (state.inverted_yaw) ? -prevControls.yaw : prevControls.yaw;
         prevControls.aux1 = channels[4];
         prevControls.aux2 = channels[5];
-
-        // Serial.print("Controls: ");
-        // Serial.print(prevControls.throttle);
-        // Serial.print(" ");
-        // Serial.print(prevControls.pitch);
-        // Serial.print(" ");
-        // Serial.print(prevControls.roll);
-        // Serial.print(" ");
-        // Serial.print(prevControls.yaw);
-        // Serial.print(" ");
-        // Serial.print(prevControls.aux1);
-        // Serial.print(" ");
-        // Serial.println(prevControls.aux2);
     }
     return prevControls;
 }

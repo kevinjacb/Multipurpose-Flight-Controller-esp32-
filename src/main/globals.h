@@ -24,9 +24,9 @@
 #define ADDR 0x68
 
 // PID Gains (default)
-#define pre_Kp 1000.0
-#define pre_Ki 5.0
-#define pre_Kd 5.0
+#define pre_Kp 3.0
+#define pre_Ki 0.05
+#define pre_Kd 1.0
 #define pre_dt 0.01 // s
 
 // WiFi AP Credentials & settings
@@ -58,7 +58,7 @@
 #if defined(BRUSHLESS)
 #define IDLE                   \
     {                          \
-        1000, 1500, 1500, 1500 \
+        1000, 1000, 1000, 1000 \
     }
 #else
 #define IDLE       \

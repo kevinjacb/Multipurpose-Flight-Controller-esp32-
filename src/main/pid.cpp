@@ -16,7 +16,6 @@ void PIDController::begin()
 
 PIDController::PIDController()
 {
-
     _kp = pre_Kp;
     _ki = pre_Ki;
     _kd = pre_Kd;
@@ -29,6 +28,8 @@ PIDController::PIDController()
 float PIDController::calculate(float setpoint, float input)
 {
     _error = setpoint - input;
+    print("Error: ");
+    println(_error);
     _error_sum += _error * _dt;
     if (millis() - lastCorrection > _dt * 1000)
     {
@@ -36,7 +37,6 @@ float PIDController::calculate(float setpoint, float input)
         _last_error = _error;
         lastCorrection = millis();
     }
-    println(_kd * error_delta);
     return _kp * _error + _ki * _error_sum + _kd * error_delta;
 }
 
@@ -46,9 +46,9 @@ void PIDController::update(output_t &outputs, state_t state, control_t controls,
     _pitch.setGains(state._Kp, state._Ki, state._Kd);
     _roll.setGains(state._Kp, state._Ki, state._Kd);
     _yaw.setGains(state._Kp, state._Ki / 5, state._Kd / 5);
-    float pitchPID = _pitch.calculate(controls.pitch, pitch);
-    float rollPID = -_roll.calculate(controls.roll, roll); // inverted roll
-    float yawPID = _yaw.calculate(0, controls.yaw + yaw);
+    float pitchPID = constrain(_pitch.calculate(controls.pitch, pitch), -400, 400);
+    float rollPID = -constrain(_roll.calculate(controls.roll, roll), -400, 400); // inverted roll
+    float yawPID = -constrain(_yaw.calculate(0, controls.yaw + yaw), -400, 400);
     // yawPID = 0; // debug
 
 #if defined(BRUSHLESS) && defined(QUAD_X) // TODO add hexa and octo and other types
