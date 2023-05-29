@@ -40,7 +40,7 @@ float PIDController::calculate(float setpoint, float input)
     return _kp * _error + _ki * _error_sum + _kd * error_delta;
 }
 
-void PIDController::update(output_t &outputs, state_t state, control_t controls, float pitch, float roll, float yaw) // PID Controller
+void PIDController::update(volatile output_t &outputs, volatile state_t &state, volatile control_t &controls, float pitch, float roll, float yaw) // PID Controller
 {
     static PIDController _pitch, _roll, _yaw;
     _pitch.setGains(state._Kp, state._Ki, state._Kd);

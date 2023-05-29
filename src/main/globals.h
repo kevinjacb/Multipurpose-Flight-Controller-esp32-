@@ -56,11 +56,13 @@
 
 // IDLE control
 #if defined(BRUSHLESS)
-#define IDLE                   \
-    {                          \
-        1000, 1000, 1000, 1000 \
+#define IDLE_VALUE 1000
+#define IDLE                               \
+    {                                      \
+        1000, 1000, 1000, 1000, 1000, 1000 \
     }
 #else
+#define IDLE_VALUE 0
 #define IDLE       \
     {              \
         0, 0, 0, 0 \
@@ -97,6 +99,8 @@ typedef struct control
     float aux1;
     float aux2;
 } control_t;
+
+control_t copyControl(volatile control_t &control);
 
 // motor outputs struct
 typedef struct outputs

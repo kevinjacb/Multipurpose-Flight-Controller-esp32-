@@ -102,12 +102,12 @@ void WiFiBluetooth::send(const char *data)
 
 */
 
-control_t WiFiBluetooth::processIncoming(String data, control_t prevControls, state_t &state)
+void WiFiBluetooth::processIncoming(String data, volatile control_t &prevControls, volatile state_t &state)
 {
     try
     {
         int len = data.length();
-        control_t rControls = prevControls;
+        control_t rControls = copyControl(prevControls);
         float recv_kp = 0.0f, recv_ki = 0.0f, recv_kd = 0.0f;
         data.trim();
 #if !defined(USE_RC)
@@ -197,15 +197,13 @@ control_t WiFiBluetooth::processIncoming(String data, control_t prevControls, st
             state._Kd = recv_kd;
             state._Ki = recv_ki;
         }
-
-        return rControls;
     }
     catch (...)
     {
-        return prevControls;
+        // TODO
     }
 }
-control_t WiFiBluetooth::receive(control_t prevControls, state_t &state)
+void WiFiBluetooth::receive(volatile control_t &prevControls, volatile state_t &state)
 {
     // TODO
     String data;
@@ -223,11 +221,12 @@ control_t WiFiBluetooth::receive(control_t prevControls, state_t &state)
         client = server.available();
         if (!client)
         { // disconnected
-            Globals::getInstance().setError(4, 2);
-            return (control_t)IDLE; // handle failsafe here (midflight disconnect)
+            Globals::getInstance().setError(3, 2);
+#if !defined(USE_RC)
+            prevControls.throttle = 0; // handle failsafe here (midflight disconnect)
+#endif
         }
     }
     if (data.length() > 0)
-        return processIncoming(data, prevControls, state);
-    return prevControls;
+        processIncoming(data, prevControls, state);
 }

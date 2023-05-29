@@ -45,7 +45,7 @@ void IRAM_ATTR RCReciever::ISR_RC()
     last_pulse = micros();
 }
 
-control_t RCReciever::receive(control_t prevControls, state_t &state)
+void RCReciever::receive(volatile control_t &prevControls, volatile state_t &state)
 {
     if (ready)
     {
@@ -60,7 +60,6 @@ control_t RCReciever::receive(control_t prevControls, state_t &state)
         prevControls.aux1 = channels[4];
         prevControls.aux2 = channels[5];
     }
-    return prevControls;
 }
 
 unsigned long RCReciever::last_pulse = 0;

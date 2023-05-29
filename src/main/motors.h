@@ -16,7 +16,7 @@ private:
 #endif
 
 public:
-    void setOutputs(output_t outputs);
+    void setOutputs(volatile output_t &outputs);
     static Outputs &getInstance();
     void begin();
 };

@@ -26,7 +26,7 @@ void Outputs::begin()
 #endif
 }
 
-void Outputs::setOutputs(output_t outputs)
+void Outputs::setOutputs(volatile output_t &outputs)
 {
 #if defined(BRUSHLESS) // TODO add hexa and octo and other types
     motors[0].writeMicroseconds(outputs.motor1);

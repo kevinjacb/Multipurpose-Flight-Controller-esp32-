@@ -1,6 +1,12 @@
 #include "globals.h"
 #include <Arduino.h>
 
+control_t copyControl(volatile control_t &control)
+{
+    control_t newControl = {control.throttle, control.roll, control.pitch, control.yaw, control.aux1, control.aux2};
+    return newControl;
+}
+
 Globals::Globals()
 {
     error = 0;

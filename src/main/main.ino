@@ -37,13 +37,13 @@ Outputs &out = Outputs::getInstance();
 RCReciever &reciever = RCReciever::getInstance();
 #endif
 
-control_t currControls = IDLE;
-output_t outputs = {0, 0, 0, 0, 0, 0};
-state_t state = {false, false, false, false, false, pre_Kp, pre_Kd, pre_Ki};
+volatile control_t currControls = IDLE;
+volatile output_t outputs = {IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE};
+volatile state_t state = {false, false, false, false, false, pre_Kp, pre_Kd, pre_Ki};
 
 float pitch = 0.0f, roll = 0.0f, yaw = 0.0f;
 float pitch_offset = 0.0f, roll_offset = 0.0f, yaw_offset = 0.0f;
-float throttle_percent = 0.0f;
+volatile float throttle_percent = 0.0f;
 
 // #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
 // #error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
@@ -51,7 +51,7 @@ float throttle_percent = 0.0f;
 
 // BluetoothSerial SerialBT;
 
-TaskHandle_t core2;
+TaskHandle_t core2 = NULL;
 
 void setup()
 {
@@ -61,7 +61,7 @@ void setup()
     errorNotifier.begin();
     eeprom.begin();
     out.begin();
-    out.setOutputs(IDLE);
+    out.setOutputs(outputs);
     WBController.begin();
 #if defined(USE_RC)
     reciever.begin();
@@ -96,11 +96,11 @@ void loop()
 
 #endif
 #if defined(USE_WIFI) // switch between wifi and rc TODO
-    currControls = WBController.receive(currControls, state);
+    WBController.receive(currControls, state);
 #endif
 
 #if defined(USE_RC)
-    currControls = reciever.receive(currControls, state);
+    reciever.receive(currControls, state);
 #endif
 
     if (state.calibrate)
@@ -146,7 +146,12 @@ void main_process(void *parameter)
             pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw);
         }
         else
-            outputs = IDLE;
+        {
+            outputs.motor1 = IDLE_VALUE;
+            outputs.motor2 = IDLE_VALUE;
+            outputs.motor3 = IDLE_VALUE;
+            outputs.motor4 = IDLE_VALUE;
+        }
         // set outputs
         out.setOutputs(outputs);
 
