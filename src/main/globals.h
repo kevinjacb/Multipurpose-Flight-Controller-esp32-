@@ -19,8 +19,8 @@
 #define NUM_CHANNELS 8
 
 // IMU Address
-// #define SEL_MPU6050 // selects mpu6050 sensor
-#define SEL_MPU9250
+#define SEL_MPU6050 // selects mpu6050 sensor
+// #define SEL_MPU9250
 #define ADDR 0x68
 
 // PID Gains (default)

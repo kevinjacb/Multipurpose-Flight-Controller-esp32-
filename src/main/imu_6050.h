@@ -51,12 +51,14 @@ public:
         // display Euler angles in degrees
         if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
         {
+            int16_t ax, ay, az, gx, gy, gz;
+            mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
             pitch = (float)ypr[1] * 180.0 / (float)M_PI;
             roll = (float)ypr[2] * 180.0 / (float)M_PI;
-            yaw = (float)ypr[0] * 180.0 / (float)M_PI - prev_yaw;
+            yaw = (float)gz / 131.0f;
 
             if (millis() - last_read > 4)
             {

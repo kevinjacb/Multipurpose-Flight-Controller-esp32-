@@ -28,13 +28,11 @@ PIDController::PIDController()
 float PIDController::calculate(float setpoint, float input)
 {
     _error = setpoint - input;
-    print("Error: ");
-    println(_error);
     _error_sum += _error * _dt;
     if (millis() - lastCorrection > _dt * 1000)
     {
-        error_delta = (_error - _last_error) / _dt;
-        _last_error = _error;
+        error_delta = -(input - _last_error) / _dt;
+        _last_error = input;
         lastCorrection = millis();
     }
     return _kp * _error + _ki * _error_sum + _kd * error_delta;
@@ -45,11 +43,17 @@ void PIDController::update(volatile output_t &outputs, volatile state_t &state, 
     static PIDController _pitch, _roll, _yaw;
     _pitch.setGains(state._Kp, state._Ki, state._Kd);
     _roll.setGains(state._Kp, state._Ki, state._Kd);
-    _yaw.setGains(state._Kp, state._Ki / 5, state._Kd / 5);
+    _yaw.setGains(3.0, 0.0005, 0);
     float pitchPID = constrain(_pitch.calculate(controls.pitch, pitch), -400, 400);
     float rollPID = -constrain(_roll.calculate(controls.roll, roll), -400, 400); // inverted roll
     float yawPID = -constrain(_yaw.calculate(0, controls.yaw + yaw), -400, 400);
     // yawPID = 0; // debug
+
+    // debug print pitch roll yaw
+    // print("pitch pid: ");
+    // print(pitchPID);
+    // print(" roll pid: ");
+    // println(rollPID);
 
 #if defined(BRUSHLESS) && defined(QUAD_X) // TODO add hexa and octo and other types
     outputs.motor1 = constrain(controls.throttle + pitchPID + rollPID + yawPID, 1000, 2000);

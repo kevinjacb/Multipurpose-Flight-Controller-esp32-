@@ -187,12 +187,13 @@ void WiFiBluetooth::processIncoming(String data, volatile control_t &prevControl
         }
         else if (data.startsWith("packed"))
         {
-            int sIndex = data.indexOf(' ');
-            recv_kp = data.substring(sIndex, data.indexOf(' ', sIndex + 1)).toDouble();
-            sIndex = data.indexOf(' ', sIndex + 1);
-            recv_kd = data.substring(sIndex, data.indexOf(' ', sIndex + 1)).toDouble();
-            sIndex = data.indexOf(' ', sIndex + 1);
-            recv_ki = data.substring(sIndex).toDouble();
+            // Serial.println(data); // debug
+            int sIndex = data.indexOf(' ', data.indexOf(' ') + 1);
+            recv_kp = data.substring(sIndex + 1, data.indexOf(' ', sIndex + 1)).toDouble();
+            sIndex = data.indexOf(' ', data.indexOf(' ', sIndex + 1) + 1);
+            recv_ki = data.substring(sIndex + 1, data.indexOf(' ', sIndex + 1)).toDouble();
+            sIndex = data.indexOf(' ', data.indexOf(' ', sIndex + 1) + 1);
+            recv_kd = data.substring(sIndex + 1).toDouble();
             state._Kp = recv_kp;
             state._Kd = recv_kd;
             state._Ki = recv_ki;

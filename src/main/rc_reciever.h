@@ -9,9 +9,9 @@ private:
     static void IRAM_ATTR ISR_RC();
 
 public:
-    static uint16_t channels[NUM_CHANNELS]; // Aileron, Elevator, Throttle, Rudder, Aux1, Aux2
-    static uint8_t current_channel;
-    unsigned static long last_pulse;
+    volatile static uint16_t channels[NUM_CHANNELS]; // Aileron, Elevator, Throttle, Rudder, Aux1, Aux2
+    volatile static uint8_t current_channel;
+    volatile unsigned static long last_pulse;
     static bool ready;
 
     static RCReciever &getInstance();

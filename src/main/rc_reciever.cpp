@@ -55,14 +55,14 @@ void RCReciever::receive(volatile control_t &prevControls, volatile state_t &sta
         prevControls.pitch = (state.inverted_pitch) ? -prevControls.pitch : prevControls.pitch;
         prevControls.roll = map(channels[0], 990, 2010, -45, 45);
         prevControls.roll = (state.inverted_roll) ? -prevControls.roll : prevControls.roll;
-        prevControls.yaw = map(channels[3], 990, 2010, -45, 45);
+        prevControls.yaw = map(channels[3], 990, 2010, -10, 10);
         prevControls.yaw = (state.inverted_yaw) ? -prevControls.yaw : prevControls.yaw;
         prevControls.aux1 = channels[4];
         prevControls.aux2 = channels[5];
     }
 }
 
-unsigned long RCReciever::last_pulse = 0;
+volatile unsigned long RCReciever::last_pulse = 0;
 bool RCReciever::ready = false;
-uint8_t RCReciever::current_channel = 0;
-uint16_t RCReciever::channels[NUM_CHANNELS] = {1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000}; // Aileron, Elevator, Throttle, Rudder, Aux1, Aux2
+volatile uint8_t RCReciever::current_channel = 0;
+volatile uint16_t RCReciever::channels[NUM_CHANNELS] = {1500, 1500, 1000, 1500, 1000, 1000, 1000, 1000}; // Aileron, Elevator, Throttle, Rudder, Aux1, Aux2
