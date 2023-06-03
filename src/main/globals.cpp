@@ -54,20 +54,21 @@ EEPROMHandler &EEPROMHandler::getInstance()
 
 void EEPROMHandler::write(uint16_t address, float value)
 {
-    byte *p = (byte *)(void *)&value;
+    uint8_t *p = reinterpret_cast<uint8_t *>(&value);
     Globals::getInstance().setError(5, 3);
     for (uint8_t i = 0; i < sizeof(value); i++)
     {
         if (EEPROM.read(address) != *p)
             EEPROM.write(address++, *p++);
     }
+    EEPROM.commit();
     Globals::getInstance().setError(0, 3);
 }
 
 float EEPROMHandler::read(uint16_t address)
 {
     float value = 0.0;
-    byte *p = (byte *)(void *)&value;
+    uint8_t *p = reinterpret_cast<uint8_t *>(&value);
     for (uint8_t i = 0; i < sizeof(value); i++)
         *p++ = EEPROM.read(address++);
     return value;

@@ -13,6 +13,7 @@ private:
     WiFiBluetooth(const WiFiBluetooth &) = delete;
     WiFiServer server;
     WiFiClient client;
+    long lastWriteToEEPROM = -1;
 
 public:
     static WiFiBluetooth &getInstance();

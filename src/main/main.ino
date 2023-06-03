@@ -63,6 +63,8 @@ void setup()
     out.begin();
     out.setOutputs(outputs);
     WBController.begin();
+    initStateFromEEPROM();
+
 #if defined(USE_RC)
     reciever.begin();
 #endif
@@ -107,6 +109,18 @@ void loop()
     {
         imu.calibrate(pitch_offset, roll_offset, yaw_offset);
         state.calibrate = false;
+    }
+    if (state.stop)
+    { // safety measure during debugging TODO
+        ready = false;
+#if defined(USE_WIFI)
+        if (currControls.throttle < 100)
+        {
+            ready = true;
+            state.stop = false;
+        }
+#endif
+        return;
     }
 #if !defined(USE_RC)
     throttle_percent = currControls.throttle / 65535.0f * 100.0f;
@@ -156,7 +170,7 @@ void main_process(void *parameter)
         out.setOutputs(outputs);
 
 #if defined(ENABLE_DEBUG)
-        if (millis() - last_debug_print2 > 200)
+        if (millis() - last_debug_print2 > 200 && false)
         {
             print("Outputs: ");
             print(outputs.motor1);
@@ -179,5 +193,27 @@ void main_process(void *parameter)
             last_debug_print2 = millis();
         }
 #endif
+    }
+}
+
+void initStateFromEEPROM()
+{
+    // get data from EEPROM during initialization
+    try
+    {
+        EEPROMHandler &eeprom = EEPROMHandler::getInstance();
+        state._Kp = eeprom.read(KP_ADDR);
+        state._Kd = eeprom.read(KD_ADDR);
+        state._Ki = eeprom.read(KI_ADDR);
+        state._Yaw_Kp = eeprom.read(YAW_KP_ADDR);
+        state._Yaw_Kd = eeprom.read(YAW_KD_ADDR);
+        state._Yaw_Ki = eeprom.read(YAW_KI_ADDR);
+        state.inverted_pitch = eeprom.read(PITCH_INVERT_ADDR);
+        state.inverted_roll = eeprom.read(ROLL_INVERT_ADDR);
+        state.inverted_yaw = eeprom.read(YAW_INVERT_ADDR);
+    }
+    catch (...)
+    {
+        println("Error in initStateFromEEPROM");
     }
 }

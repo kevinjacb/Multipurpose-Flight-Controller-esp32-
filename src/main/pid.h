@@ -15,13 +15,12 @@ private:
     static PIDController _pitch, _roll, _yaw;
     PIDController();
     float calculate(float setpoint, float input);
-    float _kp;
-    float _ki;
-    float _kd;
+    float _kp, _ki, _kd;
+    float _yaw_kp, _yaw_ki, _yaw_kd;
     float _dt;
     float _error;
     float _error_sum;
-    float _last_error;
+    float _last_error, _last_act_error;
     long lastCorrection;
     float error_delta;
 };

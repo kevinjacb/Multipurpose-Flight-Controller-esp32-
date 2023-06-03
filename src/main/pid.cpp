@@ -12,30 +12,41 @@ void PIDController::begin()
     // _kp = eeprom.read(KP_ADDR);
     // _ki = eeprom.read(KI_ADDR);
     // _kd = eeprom.read(KD_ADDR);
+    // _yaw_kp = eeprom.read(YAW_KP_ADDR);
+    // _yaw_ki = eeprom.read(YAW_KI_ADDR);
+    // _yaw_kd = eeprom.read(YAW_KD_ADDR);
 }
 
 PIDController::PIDController()
-{
+{ // TODO get values from eeprom
+    // pitch and roll settings
     _kp = pre_Kp;
     _ki = pre_Ki;
     _kd = pre_Kd;
     _dt = pre_dt;
+    // yaw settings
+    _yaw_kp = 3.0;
+    _yaw_ki = 0.0004;
+    _yaw_kd = 0.0;
     _error = 0.0f;
     _error_sum = 0.0f;
-    _last_error = 0.0f;
+    _last_error = 0.0f;     // last error without the setpoint (input)
+    _last_act_error = 0.0f; // last_actual error with the setpoint
 }
 
 float PIDController::calculate(float setpoint, float input)
 {
     _error = setpoint - input;
-    _error_sum += _error * _dt;
-    if (millis() - lastCorrection > _dt * 1000)
+    if (millis() - lastCorrection > 1000 * _dt)
     {
+        _error_sum = _error_sum + (_error + _last_act_error) * _dt / 2;
+        _last_act_error = _error;
         error_delta = -(input - _last_error) / _dt;
         _last_error = input;
         lastCorrection = millis();
     }
-    return _kp * _error + _ki * _error_sum + _kd * error_delta;
+
+    return _kp * _error + constrain(_ki * _error_sum, -400, 400) + _kd * error_delta;
 }
 
 void PIDController::update(volatile output_t &outputs, volatile state_t &state, volatile control_t &controls, float pitch, float roll, float yaw) // PID Controller
@@ -43,15 +54,15 @@ void PIDController::update(volatile output_t &outputs, volatile state_t &state, 
     static PIDController _pitch, _roll, _yaw;
     _pitch.setGains(state._Kp, state._Ki, state._Kd);
     _roll.setGains(state._Kp, state._Ki, state._Kd);
-    _yaw.setGains(3.0, 0.0005, 0);
+    _yaw.setGains(state._Yaw_Kp, state._Yaw_Ki, state._Yaw_Kd);
+
     float pitchPID = constrain(_pitch.calculate(controls.pitch, pitch), -400, 400);
     float rollPID = -constrain(_roll.calculate(controls.roll, roll), -400, 400); // inverted roll
     float yawPID = -constrain(_yaw.calculate(0, controls.yaw + yaw), -400, 400);
+
     // yawPID = 0; // debug
 
     // debug print pitch roll yaw
-    // print("pitch pid: ");
-    // print(pitchPID);
     // print(" roll pid: ");
     // println(rollPID);
 

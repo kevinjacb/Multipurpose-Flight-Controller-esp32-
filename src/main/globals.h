@@ -69,19 +69,25 @@
     }
 #endif
 // EEPROM settings
-#define EEPROM_SIZE 48
+#define EEPROM_SIZE 65
 #define KP_ADDR 0
 #define KI_ADDR 4
 #define KD_ADDR 8
-#define ACC_X_BIAS_ADDR 12
-#define ACC_Y_BIAS_ADDR 16
-#define ACC_Z_BIAS_ADDR 20
-#define GYRO_X_BIAS_ADDR 24
-#define GYRO_Y_BIAS_ADDR 28
-#define GYRO_Z_BIAS_ADDR 32
-#define MAG_X_BIAS_ADDR 36
-#define MAG_Y_BIAS_ADDR 40
-#define MAG_Z_BIAS_ADDR 44
+#define YAW_KP_ADDR 12
+#define YAW_KI_ADDR 16
+#define YAW_KD_ADDR 20
+#define ACC_X_BIAS_ADDR 24
+#define ACC_Y_BIAS_ADDR 28
+#define ACC_Z_BIAS_ADDR 32
+#define GYRO_X_BIAS_ADDR 36
+#define GYRO_Y_BIAS_ADDR 40
+#define GYRO_Z_BIAS_ADDR 44
+#define MAG_X_BIAS_ADDR 48
+#define MAG_Y_BIAS_ADDR 52
+#define MAG_Z_BIAS_ADDR 56
+#define PITCH_INVERT_ADDR 60
+#define ROLL_INVERT_ADDR 61
+#define YAW_INVERT_ADDR 62
 
 #define OUTPUT_READABLE_YAWPITCHROLL
 #define INTERRUPT_PIN 5
@@ -116,9 +122,10 @@ typedef struct outputs
 typedef struct state
 {
     bool inverted_pitch, inverted_roll, inverted_yaw;
-    bool arm;
+    bool arm, stop;
     bool calibrate;
     float _Kp, _Ki, _Kd;
+    float _Yaw_Kp, _Yaw_Ki, _Yaw_Kd;
 } state_t;
 
 class Globals
@@ -146,18 +153,21 @@ class EEPROMHandler
     0-3: Kp
     4-7: Ki
     8-11: Kd
-    12-15: AccXBias
-    16-19: AccYBias
-    20-23: AccZBias
-    24-27: GyroXBias
-    28-31: GyroYBias
-    32-35: GyroZBias
-    36-39: MagXBias
-    40-43: MagYBias
-    44-47: MagZBias
-    48: pitch_invert
-    49: roll_invert
-    50: yaw_invert
+    12-15: YawKp
+    16-19: YawKi
+    20-23: YawKd
+    24-27: AccXBias
+    28-31: AccYBias
+    32-35: AccZBias
+    36-39: GyroXBias
+    40-43: GyroYBias
+    44-47: GyroZBias
+    48-51: MagXBias
+    52-55: MagYBias
+    56-59: MagZBias
+    60: inverted_pitch
+    61: inverted_roll
+    62: inverted_yaw
 
     */
 private:
