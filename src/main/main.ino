@@ -5,6 +5,7 @@
 #include "pid.h"
 #include "wifi_bluetooth.h"
 #include "motors.h"
+#include "altitude.h"
 
 #if defined(USE_RC)
 #include "rc_reciever.h"
@@ -36,13 +37,21 @@ Outputs &out = Outputs::getInstance();
 #if defined(USE_RC)
 RCReciever &reciever = RCReciever::getInstance();
 #endif
+#if defined(HCSR04)
+Ultrasonic &ultraSonic = Ultrasonic::getInstance();
+#endif
+#if defined(BARO)
+BMPSeries &barometer = BMPSeries::getInstance();
+#endif
+Battery &battery = Battery::getInstance();
 
 volatile control_t currControls = IDLE;
 volatile output_t outputs = {IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE};
 volatile state_t state = {false, false, false, false, false, pre_Kp, pre_Kd, pre_Ki};
 
-float pitch = 0.0f, roll = 0.0f, yaw = 0.0f;
+float pitch = 0.0f, roll = 0.0f, yaw = 0.0f, altitude = 0.0f;
 float pitch_offset = 0.0f, roll_offset = 0.0f, yaw_offset = 0.0f;
+float takeoff_voltage = 0.0f, voltage = 0.0f;
 volatile float throttle_percent = 0.0f;
 
 // #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -64,10 +73,17 @@ void setup()
     out.setOutputs(outputs);
     WBController.begin();
     initStateFromEEPROM();
+#if defined(HCSR04)
+    ultraSonic.begin();
+#endif
+#if defined(BARO)
+    barometer.begin();
+#endif
 
 #if defined(USE_RC)
     reciever.begin();
 #endif
+    battery.begin();
     imu.calibrate(pitch_offset, roll_offset, yaw_offset);
     currControls.yaw = yaw_offset;
     ready = true;
@@ -77,6 +93,8 @@ void setup()
 #if defined(ENABLE_DEBUG)
 long last_debug_print = 0;
 #endif
+
+long last_motor_update = 0;
 
 void loop()
 { // handles wifi and rc
@@ -122,6 +140,7 @@ void loop()
 #endif
         return;
     }
+
 #if !defined(USE_RC)
     throttle_percent = currControls.throttle / 65535.0f * 100.0f;
 #else
@@ -143,7 +162,7 @@ void loop()
         ready = true;
 }
 
-long last_debug_print2 = millis();
+long last_debug_print2 = millis(), last_alt_measure = millis();
 void main_process(void *parameter)
 {
     // get imu data
@@ -151,23 +170,54 @@ void main_process(void *parameter)
     {
         imu.getAngles(pitch, roll, yaw);
 
+#if defined(HCSR04)
+        if (millis() - last_alt_measure > 20)
+        {
+            ultraSonic.getAlt(altitude, pitch - pitch_offset, roll - roll_offset);
+            last_alt_measure = millis();
+            if (altitude > 210)
+                altitude = -1;
+            // print("Altitude: ");
+            // println(altitude);
+        }
+#endif
+#if defined(BARO)
+        if (millis() - last_alt_measure > 20)
+        {
+            barometer.getAlt(altitude);
+            last_alt_measure = millis();
+            altitude *= 100;
+            if (altitude < 0)
+                altitude = 0;
+        }
+#endif
         // set a threshold for throttle at which the drone will start
+        voltage = battery.getVoltage();
         if (!ready)
             currControls.throttle = 0;
         if (throttle_percent > 15)
         {
             // calculate pid
-            pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw);
+            // pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw);
+            // calculate pid with alt hold
+            // pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw, altitude);
+            pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw, altitude, takeoff_voltage, voltage);
         }
         else
         {
+            takeoff_voltage = voltage;
+            pid.resetAll();
             outputs.motor1 = IDLE_VALUE;
             outputs.motor2 = IDLE_VALUE;
             outputs.motor3 = IDLE_VALUE;
             outputs.motor4 = IDLE_VALUE;
         }
         // set outputs
-        out.setOutputs(outputs);
+        if (millis() - last_motor_update > 10)
+        {
+            last_motor_update = millis();
+            out.setOutputs(outputs);
+        }
 
 #if defined(ENABLE_DEBUG)
         if (millis() - last_debug_print2 > 200 && false)

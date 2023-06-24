@@ -60,11 +60,11 @@ public:
             roll = (float)ypr[2] * 180.0 / (float)M_PI;
             yaw = (float)gz / 131.0f;
 
-            if (millis() - last_read > 4)
-            {
-                prev_yaw = (float)ypr[0] * 180.0 / (float)M_PI;
-                last_read = millis();
-            }
+            // if (millis() - last_read > 4)
+            // {
+            //     prev_yaw = (float)ypr[0] * 180.0 / (float)M_PI;
+            //     last_read = millis();
+            // }
 
 #if defined(ENABLE_DEBUG)
             if (false)

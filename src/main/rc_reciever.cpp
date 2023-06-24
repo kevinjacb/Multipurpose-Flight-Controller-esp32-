@@ -51,11 +51,11 @@ void RCReciever::receive(volatile control_t &prevControls, volatile state_t &sta
     {
 
         prevControls.throttle = channels[2];
-        prevControls.pitch = map(channels[1], 990, 2010, -45, 45);
+        prevControls.pitch = map(channels[1], 990, 2010, -60, 60);
         prevControls.pitch = (state.inverted_pitch) ? -prevControls.pitch : prevControls.pitch;
-        prevControls.roll = map(channels[0], 990, 2010, -45, 45);
+        prevControls.roll = map(channels[0], 990, 2010, -60, 60);
         prevControls.roll = (state.inverted_roll) ? -prevControls.roll : prevControls.roll;
-        prevControls.yaw = map(channels[3], 990, 2010, -10, 10);
+        prevControls.yaw = map(channels[3], 990, 2010, -20, 20);
         prevControls.yaw = (state.inverted_yaw) ? -prevControls.yaw : prevControls.yaw;
         prevControls.aux1 = channels[4];
         prevControls.aux2 = channels[5];

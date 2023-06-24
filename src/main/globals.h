@@ -18,16 +18,28 @@
 #define USE_RC 35 // pin number
 #define NUM_CHANNELS 8
 
+// ####### SENSORS #######
 // IMU Address
 #define SEL_MPU6050 // selects mpu6050 sensor
 // #define SEL_MPU9250
 #define ADDR 0x68
+#define BATT_CELLS 3   // number of cells in battery (3S,4S, etc.)
+#define BATT 4         // battery pin
+#define BATT_DIV 7.033 // voltage divider
+#define ADC_RES 4095   // adc resolution
+
+// pressure sensor(for altitude)
+// #define BARO // enter pin here
+// ultrasonic senosr(lower altitude maintainence)
+// #define HCSR04
+#define TRIG_PIN 2
+#define ECHO_PIN 15
 
 // PID Gains (default)
 #define pre_Kp 3.0
 #define pre_Ki 0.05
 #define pre_Kd 1.0
-#define pre_dt 0.01 // s
+#define pre_dt 0.004 // s
 
 // WiFi AP Credentials & settings
 #define AP_SSID "DRONEY"

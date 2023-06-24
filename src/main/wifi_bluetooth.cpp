@@ -137,6 +137,17 @@ void WiFiBluetooth::processIncoming(String data, volatile control_t &prevControl
             prevControls.pitch = y * 30.0;
         }
 #endif
+        bool yaw = false;
+        if (data.startsWith("Yaw") && !data.startsWith("Yaw packed"))
+        {
+            data = data.substring(data.indexOf(' ') + 1);
+            yaw = true;
+        }
+        else if (data.startsWith("Pitch/Roll") && !data.startsWith("Pitch/Roll packed"))
+        {
+            data = data.substring(data.indexOf(' ') + 1);
+        }
+
         if (data.startsWith("arm"))
         {
             state.arm = true;
@@ -153,19 +164,28 @@ void WiFiBluetooth::processIncoming(String data, volatile control_t &prevControl
         {
             int sIndex = data.indexOf(' ');
             recv_kp = data.substring(sIndex).toFloat();
-            state._Kp = recv_kp;
+            if (!yaw)
+                state._Kp = recv_kp;
+            else
+                state._Yaw_Kp = recv_kp;
         }
         else if (data.startsWith("Ki"))
         {
             int sIndex = data.indexOf(' ');
             recv_ki = data.substring(sIndex).toFloat();
-            state._Ki = recv_ki;
+            if (!yaw)
+                state._Ki = recv_ki;
+            else
+                state._Yaw_Ki = recv_ki;
         }
         else if (data.startsWith("Kd"))
         {
             int sIndex = data.indexOf(' ');
             recv_kd = data.substring(sIndex).toFloat();
-            state._Kd = recv_kd;
+            if (!yaw)
+                state._Kd = recv_kd;
+            else
+                state._Yaw_Kd = recv_kd;
         }
         else if (data.startsWith("pitch"))
         {

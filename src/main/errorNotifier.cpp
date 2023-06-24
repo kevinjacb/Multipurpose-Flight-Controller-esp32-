@@ -7,6 +7,7 @@
     1. IMU
     2. WiFiBluetooth
     3. EEPROM
+    4. BMP
 
     Error LEDS:
     LED 1: 34 RED
@@ -20,6 +21,7 @@
         LED 3: Blinking, LED 2: steady - Waiting for wifi/client connection: Error code 3
         LED 2,3: steady - Error with WiFi/Bluetooth : Error code 4
         LED 1,2,3: steady - Writing to EEPROM: Error code 5
+        LED 1: delayed blinking - Error with BMP : Error code 6 // low priority
 
 */
 ErrorNotifier::ErrorNotifier()
@@ -84,6 +86,13 @@ void ErrorNotifier::notifyError()
         digitalWrite(RED_L, HIGH);
         digitalWrite(GREEN_L, HIGH);
         digitalWrite(BLUE_L, HIGH);
+        break;
+
+    case 6:
+        // Error with BMP
+        blink(RED_L, 600);
+        digitalWrite(GREEN_L, HIGH);
+        digitalWrite(BLUE_L, LOW);
         break;
 
     default:
