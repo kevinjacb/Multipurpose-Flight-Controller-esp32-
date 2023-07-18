@@ -43,7 +43,7 @@ private:
     IMU_6050() {}
 
 public:
-    void getAngles(float &pitch, float &roll, float &yaw)
+    void getAngles(float &pitch, float &roll, float &yaw, float &yaw_angle)
     {
         if (!dmpReady)
             return;
@@ -58,6 +58,7 @@ public:
             mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
             pitch = (float)ypr[1] * 180.0 / (float)M_PI;
             roll = (float)ypr[2] * 180.0 / (float)M_PI;
+            yaw_angle = (float)ypr[0] * 180.0 / (float)M_PI;
             yaw = (float)gz / 131.0f;
 
             // if (millis() - last_read > 4)
@@ -79,6 +80,7 @@ public:
 #endif
         }
     }
+
     static IMU_6050 &getInstance()
     {
         static IMU_6050 instance;
@@ -88,10 +90,10 @@ public:
     {
         Globals &instance = Globals::getInstance();
         instance.setError(2, 1);
-        float pitch, roll, yaw;
+        float pitch, roll, yaw, yaw_angle;
         for (int i = 0; i < 100; i++)
         {
-            getAngles(pitch, roll, yaw);
+            getAngles(pitch, roll, yaw, yaw_angle);
             offset_pitch += pitch;
             offset_roll += roll;
             offset_yaw += yaw;
@@ -124,10 +126,13 @@ public:
         delay(2000);
         devStatus = mpu.dmpInitialize();
         // supply your own gyro offsets here, scaled for min sensitivity
-        // mpu.setXGyroOffset(220);
-        // mpu.setYGyroOffset(76);
-        // mpu.setZGyroOffset(-85);
-        // mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+        mpu.setXGyroOffset(188);
+        mpu.setYGyroOffset(-28);
+        mpu.setZGyroOffset(44);
+        mpu.setXAccelOffset(-2180);
+        mpu.setYAccelOffset(371);
+        mpu.setZAccelOffset(-40); // 1688 factory default for my test chip
+        //-2180	371	-40	188	-28	44
         // make sure it worked (returns 0 if so)
         mpuInterrupt = false;
 

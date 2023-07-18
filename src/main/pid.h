@@ -17,8 +17,6 @@ private:
     class PIDCalculator
     {
     private:
-        float _kp, _ki, _kd;
-        float _yaw_kp, _yaw_ki, _yaw_kd;
         float _dt;
         float _error;
         float _error_sum;
@@ -27,6 +25,8 @@ private:
         float error_delta;
 
     public:
+        float _kp, _ki, _kd;
+        float _yaw_kp, _yaw_ki, _yaw_kd;
         PIDCalculator();
         void setGains(float kp, float ki, float kd);
         float calculate(float setpoint, float input);

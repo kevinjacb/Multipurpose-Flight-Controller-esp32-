@@ -68,23 +68,24 @@ IMU &IMU::getInstance()
 }
 
 // get the angles from the IMU
-void IMU::getAngles(float &pitch, float &roll, float &yaw)
+void IMU::getAngles(float &pitch, float &roll, float &yaw, float &yaw_angle) // TODO, yaw and yaw_angle are the same
 {
     mpu.update();
 
     pitch = mpu.getPitch();
     roll = mpu.getRoll();
     yaw = mpu.getYaw();
+    yaw_angle = mpu.getYaw();
 }
 
 void IMU::calibrate(float &offset_pitch, float &offset_roll, float &offset_yaw)
 {
     Globals &instance = Globals::getInstance();
     instance.setError(2, 1);
-    float pitch, roll, yaw;
+    float pitch, roll, yaw, yaw_angle;
     for (int i = 0; i < 100; i++)
     {
-        getAngles(pitch, roll, yaw);
+        getAngles(pitch, roll, yaw, yaw_angle);
         offset_pitch += pitch;
         offset_roll += roll;
         offset_yaw += yaw;

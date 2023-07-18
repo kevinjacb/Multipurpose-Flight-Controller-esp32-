@@ -11,12 +11,13 @@
 #define BLUE_L 26
 #define IMU_ERROR 1
 
-#define ENABLE_DEBUG
+// #define ENABLE_DEBUG
 // wifi control enable
 #define USE_WIFI
 // disables radio control over the drone via wifi
 #define USE_RC 35 // pin number
 #define NUM_CHANNELS 8
+#define MODE PLANE // PLANE or QUAD_X or MICRO_QUAD_X
 
 // ####### SENSORS #######
 // IMU Address
@@ -41,17 +42,15 @@
 #define pre_Kd 1.0
 #define pre_dt 0.004 // s
 
+// Voltage monitor
+// #define VOLTAGE_MONITOR 34 // enable voltage monitor with pin number
+
 // WiFi AP Credentials & settings
-#define AP_SSID "DRONEY"
-#define AP_PSWD "123456789"
+#define AP_SSID "SUSSYBOI"
+#define AP_PSWD "HOOLIGAN1234"
 #define TIMEOUT 60000 // wifi timeout in ms (1 min)
 
-// drone types TODO
-#define BRUSHLESS // uncomment for brushless
-
-#define QUAD_X
-// #define HEX
-
+#define NUM_MOTORS 6 // number of motors
 // motor pins (currently only for quad x and hex configs)
 #define MOTOR1 13
 #define MOTOR2 12
@@ -67,18 +66,19 @@
 #define PWM_RES_BRUSHLESS 10  // bits
 
 // IDLE control
-#if defined(BRUSHLESS)
+#if MODE == PLANE
+#define SERVO_IDLE 1500
+#define PITCH_ROLL_ENDPOINT 50
+#define YAW_ENDPOINT 90
+#define IDLE_VALUE 1000 // TODO
+#elif MODE == QUAD_X
 #define IDLE_VALUE 1000
-#define IDLE                               \
-    {                                      \
-        1000, 1000, 1000, 1000, 1000, 1000 \
-    }
-#else
+#define PITCH_ROLL_ENDPOINT 60
+#define YAW_ENDPOINT 20
+#elif MODE == MICRO_QUAD_X
 #define IDLE_VALUE 0
-#define IDLE       \
-    {              \
-        0, 0, 0, 0 \
-    }
+#define PITCH_ROLL_ENDPOINT 60
+#define YAW_ENDPOINT 20
 #endif
 // EEPROM settings
 #define EEPROM_SIZE 65
@@ -107,10 +107,24 @@
 // data transfer settings
 #define SEPARATOR " "
 
+// windup limiter
+#define INTEGRAL_WINDUP_LIMIT 400
+#ifdef MODE == PLANE
+#define PID_LIMIT 600
+#else
+#define PID_LIMIT 500
+#endif
+
+#define IMU_DATA pitch, roll, yaw
+#define CORRECTED_IMU_DATA pitch - pitch_offset, roll - roll_offset, yaw
+
 // control data struct
 typedef struct control
 {
     float throttle;
+    float aileron;
+    float elevator;
+    float rudder;
     float roll;
     float pitch;
     float yaw;
@@ -130,6 +144,17 @@ typedef struct outputs
     uint16_t motor5;
     uint16_t motor6;
 } output_t;
+
+typedef struct imu_data // TO be implemented
+{
+    float ax, ay, az;
+    float gx, gy, gz;
+    float mx, my, mz;
+    float temp;
+    float pitch, roll, yaw;
+    float pitch_offset, roll_offset, yaw_offset;
+    float alt;
+} imu_data_t;
 
 typedef struct state
 {

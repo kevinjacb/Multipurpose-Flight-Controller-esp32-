@@ -84,6 +84,9 @@ void WiFiBluetooth::disconnect()
 void WiFiBluetooth::send(const char *data)
 {
     // TODO
+    if (!client.connected())
+        return;
+    client.printf(data);
 }
 
 /* COMMANDS:
@@ -120,7 +123,7 @@ void WiFiBluetooth::processIncoming(String data, volatile control_t &prevControl
             int y = data.substring(sIndex).toFloat();
 
             prevControls.yaw = x * 30.0;
-#if defined(BRUSHED)
+#if MODE == MICRO_QUAD_X
             prevControls.throttle += y * 5000;
 #else
             prevControls.throttle += y * 100;

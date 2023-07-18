@@ -6,6 +6,7 @@
 #include "wifi_bluetooth.h"
 #include "motors.h"
 #include "altitude.h"
+#include "stdio.h"
 
 #if defined(USE_RC)
 #include "rc_reciever.h"
@@ -45,11 +46,11 @@ BMPSeries &barometer = BMPSeries::getInstance();
 #endif
 Battery &battery = Battery::getInstance();
 
-volatile control_t currControls = IDLE;
+volatile control_t currControls = {IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, 0, 0, 0, IDLE_VALUE, IDLE_VALUE};
 volatile output_t outputs = {IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE, IDLE_VALUE};
 volatile state_t state = {false, false, false, false, false, pre_Kp, pre_Kd, pre_Ki};
 
-float pitch = 0.0f, roll = 0.0f, yaw = 0.0f, altitude = 0.0f;
+float pitch = 0.0f, roll = 0.0f, yaw = 0.0f, yaw_angle = 0.0f, altitude = 0.0f;
 float pitch_offset = 0.0f, roll_offset = 0.0f, yaw_offset = 0.0f;
 float takeoff_voltage = 0.0f, voltage = 0.0f;
 volatile float throttle_percent = 0.0f;
@@ -84,7 +85,7 @@ void setup()
     reciever.begin();
 #endif
     battery.begin();
-    imu.calibrate(pitch_offset, roll_offset, yaw_offset);
+    // imu.calibrate(pitch_offset, roll_offset, yaw_offset);
     currControls.yaw = yaw_offset;
     ready = true;
     xTaskCreatePinnedToCore(main_process, "main_process", 10000, NULL, 1, &core2, 1);
@@ -94,7 +95,7 @@ void setup()
 long last_debug_print = 0;
 #endif
 
-long last_motor_update = 0;
+long last_motor_update = 0, last_data_update = 0;
 
 void loop()
 { // handles wifi and rc
@@ -146,6 +147,15 @@ void loop()
 #else
     throttle_percent = (currControls.throttle - 1000) / 1000.0f * 100.0f;
 #endif
+    // send pitch, roll, yaw data to app if connected
+    if (throttle_percent < 5 && millis() - last_data_update > 10)
+    {
+        last_data_update = millis();
+        char buffer[50];
+        sprintf(buffer, "P:%.2f,R:%.2f,Y:%.2f\n", CORRECTED_IMU_DATA);
+        WBController.send(buffer);
+    }
+
     if (global.getError() != 0)
     { // TODO disarm drone when error occurs
 #if defined(USE_RC)
@@ -168,80 +178,59 @@ void main_process(void *parameter)
     // get imu data
     while (true)
     {
-        imu.getAngles(pitch, roll, yaw);
+        imu.getAngles(IMU_DATA, yaw_angle);
+#if MODE == PLANE
+        if (currControls.aux1 < 1500)
+        { // turn off gyro
+            if (currControls.aux2 < 1500)
+            {
+                idle();
+                continue;
+            }
+            pass_through();
+#if defined(ENABLE_DEBUG)
+            debug_print(1);
+#endif
+            continue;
+        }
+#endif
 
-#if defined(HCSR04)
-        if (millis() - last_alt_measure > 20)
-        {
-            ultraSonic.getAlt(altitude, pitch - pitch_offset, roll - roll_offset);
-            last_alt_measure = millis();
-            if (altitude > 210)
-                altitude = -1;
-            // print("Altitude: ");
-            // println(altitude);
-        }
-#endif
-#if defined(BARO)
-        if (millis() - last_alt_measure > 20)
-        {
-            barometer.getAlt(altitude);
-            last_alt_measure = millis();
-            altitude *= 100;
-            if (altitude < 0)
-                altitude = 0;
-        }
-#endif
         // set a threshold for throttle at which the drone will start
+        altitude = calculate_altitude();
+#ifdef VOLTAGE_MONITOR
         voltage = battery.getVoltage();
+#endif
+
         if (!ready)
-            currControls.throttle = 0;
-        if (throttle_percent > 15)
+        {
+            idle();
+            continue;
+        }
+#if MODE != PLANE
+        if (throttle_percent > 15 && currControls.aux2 > 1500)
         {
             // calculate pid
             // pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw);
             // calculate pid with alt hold
             // pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw, altitude);
-            pid.update(outputs, state, currControls, pitch - pitch_offset, roll - roll_offset, yaw, altitude, takeoff_voltage, voltage);
+            pid.update(outputs, state, currControls, CORRECTED_IMU_DATA, altitude, takeoff_voltage, voltage);
         }
+#else
+        if (currControls.aux2 > 1500)
+        {
+            pid.update(outputs, state, currControls, CORRECTED_IMU_DATA);
+        }
+#endif
         else
         {
             takeoff_voltage = voltage;
             pid.resetAll();
-            outputs.motor1 = IDLE_VALUE;
-            outputs.motor2 = IDLE_VALUE;
-            outputs.motor3 = IDLE_VALUE;
-            outputs.motor4 = IDLE_VALUE;
+            idle();
         }
         // set outputs
-        if (millis() - last_motor_update > 10)
-        {
-            last_motor_update = millis();
-            out.setOutputs(outputs);
-        }
-
+        setOutputs();
 #if defined(ENABLE_DEBUG)
-        if (millis() - last_debug_print2 > 200 && false)
-        {
-            print("Outputs: ");
-            print(outputs.motor1);
-            print(" ");
-            print(outputs.motor2);
-            print(" ");
-            print(outputs.motor3);
-            print(" ");
-            print(outputs.motor4);
-            println();
-            print("Controls: ");
-            print(currControls.throttle);
-            print(" ");
-            print(currControls.pitch);
-            print(" ");
-            print(currControls.roll);
-            print(" ");
-            print(currControls.yaw);
-            println();
-            last_debug_print2 = millis();
-        }
+        debug_print(1);
 #endif
     }
 }
@@ -267,3 +256,107 @@ void initStateFromEEPROM()
         println("Error in initStateFromEEPROM");
     }
 }
+
+// 0 - ultra sonic, 1 - barometer
+float calculate_altitude()
+{
+    float altitude = -1;
+
+#if defined(HCSR04)
+    if (millis() - last_alt_measure > 20)
+    {
+        ultraSonic.getAlt(altitude, pitch - pitch_offset, roll - roll_offset);
+        last_alt_measure = millis();
+        if (altitude > 210)
+            altitude = -1;
+        // print("Altitude: ");
+        // println(altitude);
+    }
+#endif
+#if defined(BARO)
+    if (millis() - last_alt_measure > 20)
+    {
+        barometer.getAlt(altitude);
+        last_alt_measure = millis();
+        altitude *= 100;
+        if (altitude < 0)
+            altitude = 0;
+    }
+#endif
+
+    return altitude;
+}
+
+void debug_print(int id)
+{
+    switch (id)
+    {
+    case 0: // general
+        print("Pitch: ");
+        print(pitch);
+        print("\tRoll: ");
+        print(roll);
+        print("\tYaw: ");
+        print(yaw);
+        print("\tAltitude: ");
+        print(altitude);
+        print("\tVoltage: ");
+        print(voltage);
+        print("\tThrottle: ");
+        print(throttle_percent);
+        println();
+        break;
+    case 1: // channels
+        print("Throttle: ");
+        print(currControls.throttle);
+        print("\tAileron: ");
+        print(currControls.aileron);
+        print("\tElevator: ");
+        print(currControls.elevator);
+        print("\tRudder: ");
+        print(currControls.rudder);
+        print("\tAux1: ");
+        print(currControls.aux1);
+        print("\tAux2: ");
+        print(currControls.aux2);
+        println();
+        break;
+    }
+}
+
+void setOutputs()
+{
+    if (millis() - last_motor_update > 10)
+    {
+        last_motor_update = millis();
+        out.setOutputs(outputs);
+    }
+}
+
+void idle()
+{
+    outputs.motor1 = IDLE_VALUE;
+#if MODE == PLANE
+    outputs.motor2 = SERVO_IDLE;
+    outputs.motor3 = SERVO_IDLE;
+    outputs.motor4 = SERVO_IDLE;
+    outputs.motor5 = SERVO_IDLE;
+#else
+    outputs.motor2 = IDLE_VALUE;
+    outputs.motor3 = IDLE_VALUE;
+    outputs.motor4 = IDLE_VALUE;
+#endif
+    out.setOutputs(outputs);
+}
+
+#if MODE == PLANE
+void pass_through() // only for planes
+{
+    outputs.motor1 = currControls.throttle;
+    outputs.motor2 = currControls.aileron;
+    outputs.motor3 = currControls.aileron;
+    outputs.motor4 = currControls.elevator;
+    outputs.motor5 = currControls.rudder;
+    setOutputs();
+}
+#endif

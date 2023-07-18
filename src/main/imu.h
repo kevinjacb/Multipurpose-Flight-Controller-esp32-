@@ -7,7 +7,7 @@
 class IMU
 {
 public:
-    void getAngles(float &pitch, float &roll, float &yaw);
+    void getAngles(float &pitch, float &roll, float &yaw, float &yaw_angle);
     static IMU &getInstance();
     void calibrate(float &pitch_offset, float &roll_offset, float &yaw_offset);
     void begin();

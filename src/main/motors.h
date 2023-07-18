@@ -11,9 +11,7 @@ private:
     Outputs();
     Outputs(const Outputs &) = delete; // disable copy constructor
     uint8_t *motorPins;
-#if defined(BRUSHLESS) && defined(QUAD_X) // TODO add hexa and octo and other types
-    Servo motors[4];
-#endif
+    Servo motors[NUM_MOTORS];
 
 public:
     void setOutputs(volatile output_t &outputs);

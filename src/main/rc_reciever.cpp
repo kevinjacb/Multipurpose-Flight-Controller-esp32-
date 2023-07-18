@@ -47,15 +47,28 @@ void IRAM_ATTR RCReciever::ISR_RC()
 
 void RCReciever::receive(volatile control_t &prevControls, volatile state_t &state)
 {
+    // Serial.print("RC: ");
+    // for (int i = 0; i < NUM_CHANNELS; i++)
+    //     Serial.print(channels[i]), Serial.print(" ");
+    Serial.println();
     if (ready)
     {
 
         prevControls.throttle = channels[2];
-        prevControls.pitch = map(channels[1], 990, 2010, -60, 60);
+#if MODE == PLANE
+        prevControls.aileron = map(channels[0], 990, 2010, 900, 2100);
+        prevControls.elevator = map(channels[1], 990, 2010, 900, 2100);
+        prevControls.rudder = map(channels[3], 990, 2010, 900, 2100);
+#else
+        prevControls.aileron = channels[0];
+        prevControls.elevator = channels[1];
+        prevControls.rudder = channels[3];
+#endif
+        prevControls.pitch = map(channels[1], 990, 2010, -PITCH_ROLL_ENDPOINT, PITCH_ROLL_ENDPOINT);
         prevControls.pitch = (state.inverted_pitch) ? -prevControls.pitch : prevControls.pitch;
-        prevControls.roll = map(channels[0], 990, 2010, -60, 60);
+        prevControls.roll = map(channels[0], 990, 2010, -PITCH_ROLL_ENDPOINT, PITCH_ROLL_ENDPOINT);
         prevControls.roll = (state.inverted_roll) ? -prevControls.roll : prevControls.roll;
-        prevControls.yaw = map(channels[3], 990, 2010, -20, 20);
+        prevControls.yaw = map(channels[3], 990, 2010, -YAW_ENDPOINT, YAW_ENDPOINT);
         prevControls.yaw = (state.inverted_yaw) ? -prevControls.yaw : prevControls.yaw;
         prevControls.aux1 = channels[4];
         prevControls.aux2 = channels[5];

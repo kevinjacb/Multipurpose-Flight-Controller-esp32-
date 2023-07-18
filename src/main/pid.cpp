@@ -51,27 +51,39 @@ float PIDController::PIDCalculator::calculate(float setpoint, float input)
         lastCorrection = millis();
     }
 
-    return constrain(_kp * _error, -400, 400) + constrain(_ki * _error_sum, -400, 400) + constrain(_kd * error_delta, -400, 400); // prevents integral windup
+    return constrain(_kp * _error, -PID_LIMIT, PID_LIMIT) + constrain(_ki * _error_sum, -INTEGRAL_WINDUP_LIMIT, INTEGRAL_WINDUP_LIMIT) + constrain(_kd * error_delta, -PID_LIMIT, PID_LIMIT); // prevents integral windup
 }
 
 void PIDController::update(volatile output_t &outputs, volatile state_t &state, volatile control_t &controls, float pitch, float roll, float yaw) // PID Controller
 {
-    _pitch.setGains(state._Kp, state._Ki, state._Kd);
-    _roll.setGains(state._Kp, state._Ki, state._Kd);
-    _yaw.setGains(state._Yaw_Kp, state._Yaw_Ki, state._Yaw_Kd);
+    // check if any of the gains have changed
+    if (state._Kp != _pitch._kp || state._Ki != _pitch._ki || state._Kd != _pitch._kd)
+    {
+        _pitch.setGains(state._Kp, state._Ki, state._Kd);
+        _roll.setGains(state._Kp, state._Ki, state._Kd);
+    }
+    else if (state._Yaw_Kp != _yaw._kp || state._Yaw_Ki != _yaw._ki || state._Yaw_Kd != _yaw._kd)
+    {
+        _yaw.setGains(state._Yaw_Kp, state._Yaw_Ki, state._Yaw_Kd);
+    }
 
-    float pitchPID = constrain(_pitch.calculate(controls.pitch, pitch), -400, 400);
-    float rollPID = -constrain(_roll.calculate(controls.roll, roll), -400, 400); // inverted roll
-    float yawPID = -constrain(_yaw.calculate(0, controls.yaw + yaw), -400, 400);
+    float pitchPID = -constrain(_pitch.calculate(controls.pitch, pitch), -PID_LIMIT, PID_LIMIT);
+    float rollPID = -constrain(_roll.calculate(controls.roll, roll), -PID_LIMIT, PID_LIMIT); // inverted roll
+    float yawPID = -constrain(_yaw.calculate(0, controls.yaw + yaw), -PID_LIMIT, PID_LIMIT);
 
     // yawPID = 0; // debug
-
-#if defined(BRUSHLESS) && defined(QUAD_X) // TODO add hexa and octo and other types
+#if MODE == PLANE
+    outputs.motor1 = controls.throttle;
+    outputs.motor2 = constrain(SERVO_IDLE + rollPID, 900, 2100);  // Aileron1
+    outputs.motor3 = constrain(SERVO_IDLE + rollPID, 900, 2100);  // Aileron2
+    outputs.motor4 = constrain(SERVO_IDLE + pitchPID, 900, 2100); // Elevator
+    outputs.motor5 = constrain(SERVO_IDLE + yawPID, 900, 2100);   // Rudder
+#elif MODE == QUAD_X                                              // TODO add hexa and octo and other types
     outputs.motor1 = constrain(controls.throttle + pitchPID + rollPID + yawPID, 1000, 2000);
     outputs.motor2 = constrain(controls.throttle + pitchPID - rollPID - yawPID, 1000, 2000);
     outputs.motor3 = constrain(controls.throttle - pitchPID - rollPID + yawPID, 1000, 2000);
     outputs.motor4 = constrain(controls.throttle - pitchPID + rollPID - yawPID, 1000, 2000);
-#elif defined(QUAD_X)
+#elif MODE == MICRO_QUAD_X
     outputs.motor1 = constrain(controls.throttle + pitchPID + rollPID + yawPID, 0, 65535);
     outputs.motor2 = constrain(controls.throttle + pitchPID - rollPID - yawPID, 0, 65535);
     outputs.motor3 = constrain(controls.throttle - pitchPID - rollPID + yawPID, 0, 65535);
@@ -86,10 +98,10 @@ void PIDController::update(volatile output_t &outputs, volatile state_t &state, 
     _yaw.setGains(state._Yaw_Kp, state._Yaw_Ki, state._Yaw_Kd);
     _throttle.setGains(2, 0.0001, 0.2);
 
-    float pitchPID = constrain(_pitch.calculate(controls.pitch, pitch), -400, 400);
-    float rollPID = -constrain(_roll.calculate(controls.roll, roll), -400, 400); // inverted roll
-    float yawPID = -constrain(_yaw.calculate(0, controls.yaw + yaw), -400, 400);
-    float throttlePID = constrain(_throttle.calculate(150, altitude), -400, 400);
+    float pitchPID = constrain(_pitch.calculate(controls.pitch, pitch), -PID_LIMIT, PID_LIMIT);
+    float rollPID = constrain(_roll.calculate(controls.roll, roll), -PID_LIMIT, PID_LIMIT); // inverted roll
+    float yawPID = -constrain(_yaw.calculate(0, controls.yaw + yaw), -PID_LIMIT, PID_LIMIT);
+    float throttlePID = constrain(_throttle.calculate(150, altitude), -PID_LIMIT, PID_LIMIT);
     if (controls.aux1 < 1500 || altitude == -1)
     {
         throttlePID = (takeoff_voltage - voltage) * 40; // TODO add voltage PID
@@ -102,10 +114,10 @@ void PIDController::update(volatile output_t &outputs, volatile state_t &state, 
     }
 
     // debug print pitch roll yaw
-    print("Error: ");
-    print(roll);
-    print(" roll pid: ");
-    println(rollPID);
+    // print("Error: ");
+    // print(roll);
+    // print(" roll pid: ");
+    // println(rollPID);
 
     // yawPID = 0; // debug
     // print("altitude: ");
@@ -113,17 +125,20 @@ void PIDController::update(volatile output_t &outputs, volatile state_t &state, 
     // print(" throttle: ");
     // println(throttlePID);
 
-    // debug print pitch roll yaw
-    // print(" roll pid: ");
-    // println(rollPID);
+#if MODE == PLANE // here motor1,2 -> ailerons and motor3 -> elevator motor4 -> rudder
+    outputs.motor1 = controls.throttle;
+    outputs.motor2 = constrain(controls.aileron + rollPID, 1000, 2000);
+    outputs.motor3 = constrain(controls.aileron + rollPID, 1000, 2000);
+    outputs.motor4 = constrain(controls.elevator + pitchPID, 1000, 2000);
+    outputs.motor5 = constrain(controls.rudder + yawPID, 1000, 2000);
 
-#if defined(BRUSHLESS) && defined(QUAD_X) // TODO add hexa and octo and other types
+#elif MODE == QUAD_X // TODO add hexa and octo and other types
     // controls.throttle = controls.throttle + throttlePID;
     outputs.motor1 = constrain(controls.throttle + throttlePID + pitchPID + rollPID + yawPID, 1000, 2000);
     outputs.motor2 = constrain(controls.throttle + throttlePID + pitchPID - rollPID - yawPID, 1000, 2000);
     outputs.motor3 = constrain(controls.throttle + throttlePID - pitchPID - rollPID + yawPID, 1000, 2000);
     outputs.motor4 = constrain(controls.throttle + throttlePID - pitchPID + rollPID - yawPID, 1000, 2000);
-#elif defined(QUAD_X)
+#elif MODE == MICRO_QUAD_X
     outputs.motor1 = constrain(controls.throttle + pitchPID + rollPID + yawPID, 0, 65535);
     outputs.motor2 = constrain(controls.throttle + pitchPID - rollPID - yawPID, 0, 65535);
     outputs.motor3 = constrain(controls.throttle - pitchPID - rollPID + yawPID, 0, 65535);
